@@ -1,4 +1,11 @@
-# Iosevka ![Version](https://img.shields.io/github/release/be5invis/Iosevka.svg) [![Patreon](https://img.shields.io/badge/donate-patreon-red.svg)](https://www.patreon.com/user?u=5787198) [![Donate](https://img.shields.io/badge/donate-alipay-orange.svg)](http://7xpdnl.dl1.z0.glb.clouddn.com/T1v4huXnleXXXXXXXX.png)
+# Iosevka Fork
+
+All I have in this fork are my custom settings to generate an expanded version
+suitable for replacing Consolas and DejaVu in my day-to-day work, because
+Consolas does not have enough Unicode coverage, and DejaVu has annoyances I'd
+rather live without.
+
+# Iosevka
 
 Coders’ typeface, built from code.
 

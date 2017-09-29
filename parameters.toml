@@ -248,8 +248,9 @@ family = 'CC'
 ### Widths
 # Expanded : I heard someone want it being wider...
 [wd-expanded.multiplies]
-width = 1.15
-sb = 1.15
+width = 1.2
+sb = 1.2
+longjut = 1.2
 [expanded]
 inherits = ['wd-expanded']
 [expanded.adds]
