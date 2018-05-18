@@ -88,20 +88,42 @@ The first step, `make custom-config` takes following parameters to set styles of
 * `italic='<styles>'`, styles for italics only.
 * `oblique='<styles>'`, styles for obliques only.
 
-You can add arbitary styles for these variables, for example, `make custom-config upright='v-l-zshaped v-i-zshaped' && make custom` will create a variant with Z-shaped letter `l` and `i` for uprights.
+You can add arbitrary styles for these variables.
 
-The current available styles are:
+You can also customize the font family and target weights:
+
+* `family='<Font Family>'`, for a customized font family name.
+* `weights='<list of weights>'`, a space-separated list, indicates the specific weights needed to be built. The candidates are:
+  * `thin`
+  * `extralight`
+  * `light`
+  * `book` (regular)
+  * `medium`
+  * `bold`
+  * `heavy`
+
+For example,
+
+```bash
+make custom-config upright='v-l-zshaped v-i-zshaped' family='Iosevka X' weights='book bold'
+make custom
+```
+
+will create a variant with Z-shaped letter `l` and `i` for uprights, and it would be named as '`Iosevka X`' after installation, and only Regular and Bold weights would be created.
+
+The current available styles for `design`/`upright`/`italic`/`oblique` options are:
 
 * Styles for general shape:
   * `sans` : Sans serif (default).
   * `slab` : Slab serif. When present, the family of your font would be `Iosevka Slab`.
 * Styles related to ligations and spacing:
-  - `term` : Disable ligations. When this style is present, the font built will not contain ligatures, and its family name will be set to “`Iosevka Term`”. In case of your OS or editor cannot handle ligatures correctly, you can disable ligations with it.
+  - `term` : Disable ligations and exact monospace. When this style is present, the font built will not contain ligatures, and its family name will be set to “`Iosevka Term`”. In case of your OS or editor cannot handle ligatures correctly, you can disable ligations with it.
+  - `termlig` : Similar to `term`, the font is exact monospace to make `fontconfig` happy, while ligations are still present.
   - `type` : Make some symbols, like arrows (`→`) and mathematical operators full-width.
   - `stress-fw` : When included, full-width characters varying form `U+FF00` to `U+FFFF` will be boxed to present a clear distinguish between ASCII and Full-width. The family name will be set to “`Iosevka StFW`”.
 * All registered `ss##` and `cv##` feature tags, including:
   * `ss01`~`ss10` : Predefined stylistic sets based on other Monospace fonts.
-  * `cv01`~`cv45` : Standalone character variants.
+  * `cv01`~`cv53` : Standalone character variants.
 * Styles for ligation sets, include:
   * `ligset-haskell`: Default ligation set would be assigned to Haskell.
   * `ligset-idris`: Default ligation set would be assigned to Idris.
@@ -128,6 +150,9 @@ The current available styles are:
   * Styles for letter `a`:
     * `v-a-doublestorey` : Double-storey `a` (default for upright and oblique).
     * `v-a-singlestorey` : Single-storey `a` (default for italic).
+  * Styles for letter `f`:
+    * `v-f-straight`: `f` without bottom hook (default for upright and oblique).
+    * `v-f-tailed`: `f` with a leftward bottom hook (default for italic).
   * Styles for letter `g`:
     * `v-g-doublestorey` : Double-storey `g` (default for upright and oblique).
     * `v-g-singlestorey` : Single-storey `g` (default for italic).
@@ -141,11 +166,20 @@ The current available styles are:
   * Styles for letter `Q`:
     * `v-q-taily` : `Q` with a curly tail (default).
     * `v-q-straight` : `Q` with a straight tail in the old versions.
+  * Styles for letter `y`:
+    * `v-y-straight`: More-straight letter `y`.
+    * `v-y-curly`: Curly, cursive-like `y`.
   * Styles for zero (`0`):
     * `v-zero-slashed` : Slashed Zero `0` (default).
     * `v-zero-dotted` : Dotted Zero `0`.
     * `v-zero-unslashed` : O-like `0`.
-  * Styles for ASCII tilde (`~`), asterisk (`*`), paragaraph(`¶`), underscore (`_`) and ASCII Caret (^):
+  * Styles for one (`1`)
+    * `v-one-serifed` : `1` with bottom serif (default for Slab).
+    * `v-one-hooky` : `1` without bottom serif (default for Sans).
+  * Styles for three (`3`):
+    * `v-three-flattop` : Flat top `3` (Like Museo Sans / Montserrat).
+    * `v-three-twoarks` : Arched top `3` (default).
+  * Styles for ASCII tilde (`~`), asterisk (`*`), paragaraph(`¶`), underscore (`_`) and ASCII Caret (`^`):
     * `v-tilde-high` : Higher tilde `~`.
     * `v-tilde-low` : Lower tilde `~` (default).
     * `v-asterisk-high` : Higher asterisk `*` (default).

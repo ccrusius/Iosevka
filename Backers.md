@@ -7,6 +7,7 @@ You can join them in supporting Iosevka development by [pledging on Patreon](htt
 - Cheng-Wei Chien
 - Tianyu Ge
 - (Anonymous User 4362976)
+- Delton Ding
 
 ## Backers
 
@@ -18,3 +19,9 @@ You can join them in supporting Iosevka development by [pledging on Patreon](htt
 - Yoshito Komatsu
 - Dylan Sinnott
 - robertgzr
+- Pavlos Vinieratos
+- Matthew Piziak
+- Winnie Quinn
+- Clemens
+- Pascal
+- Kevin Sidarous

@@ -3,7 +3,10 @@ const path = require("path");
 const argv = require("yargs").argv;
 const pad = require("pad");
 
-const weights = ["thin", "extralight", "light", "book", "medium", "bold", "heavy"];
+const possibleWeights = new Set(["thin", "extralight", "light", "book", "medium", "bold", "heavy"]);
+const weights = argv.weights
+	? argv.weights.split(/ +/g).filter(w => possibleWeights.has(w))
+	: [...possibleWeights];
 const slantnesses = ["upright", "italic", "oblique"];
 const widths = ["term", "normal", "cc"];
 const designs = ["sans", "slab"];
@@ -64,40 +67,43 @@ let definedBuildSeqs = {};
 
 function createMake(mapping) {
 	const { hives, dir, filename, cm, custom } = mapping;
-	let tfname = `$(BUILD)/${filename}.0.otd`;
-	let cmTarget = `$(BUILD)/${filename}.charmap`;
+	const tfname = `$(BUILD)/${filename}.0.otd`;
+	const cmTarget = `$(BUILD)/${filename}.charmap`;
 
-	let target = `$(DIST)/${dir}/ttf/${filename}.ttf`;
-	let woffTarget = `$(DIST)/${dir}/woff/${filename}.woff`;
-	let woff2Target = `$(DIST)/${dir}/woff2/${filename}.woff2`;
+	const target = `$(DIST)/${dir}/ttf/${filename}.ttf`;
+	const unhintedTarget = `$(DIST)/${dir}/ttf-unhinted/${filename}.ttf`;
+	const woffTarget = `$(DIST)/${dir}/woff/${filename}.woff`;
+	const woff2Target = `$(DIST)/${dir}/woff2/${filename}.woff2`;
 
 	let buf = "";
 	if (!definedBuildSeqs[tfname]) {
+		const output = `-o $@`;
+		const charmapOutput = cm ? "--charmap $(BUILD)/" + filename + ".charmap" : "";
+		const familyDirective = argv.family ? `--family '${argv.family}'` : "";
+
 		buf += `
 ${tfname} : ${custom || ""} $(SCRIPTS) | $(BUILD) $(DIST)/${dir}/
-	@echo Building ${filename} with ${hives.join(" ")}
-	$(GENERATE) ${hives.join(" ")} -o $@ ${cm ? "--charmap $(BUILD)/" + filename + ".charmap" : ""}`;
+	@echo Building ${filename}, with ${hives.join(" ")}
+	$(GENERATE) ${hives.join(" ")} ${familyDirective} ${output} ${charmapOutput}
+`;
 		definedBuildSeqs[tfname] = true;
 	}
 	buf += `
 ${target} : ${tfname} | $(DIST)/${dir}/ttf/
 	@echo Hinting and optimizing ${tfname} '->' $@
-	@otfccbuild ${tfname} -o $(BUILD)/${filename}.1.ttf --keep-average-char-width
-	@ttfautohint $(BUILD)/${filename}.1.ttf $(BUILD)/${filename}.2.ttf
-	@otfccdump $(BUILD)/${filename}.2.ttf -o $(BUILD)/${filename}.2.otd --pretty
-	@otfccbuild $(BUILD)/${filename}.2.otd -o $@ -O3 -s --keep-average-char-width
-	@rm $(BUILD)/${filename}.1.ttf $(BUILD)/${filename}.2.ttf $(BUILD)/${filename}.2.otd`;
-
-	buf += `
+	@otfccbuild ${tfname} -o $(BUILD)/${filename}.1.ttf -O3 --keep-average-char-width
+	@ttfautohint $(BUILD)/${filename}.1.ttf $@
+	@rm $(BUILD)/${filename}.1.ttf
+${unhintedTarget} : ${tfname} | $(DIST)/${dir}/ttf-unhinted/
+	@otfccbuild ${tfname} -o $@ -O3 --keep-average-char-width
 ${woffTarget} : ${target} | $(DIST)/${dir}/woff/
 	sfnt2woff $<
-	mv $(subst .ttf,.woff,$<) $@`;
-	buf += `
+	mv $(subst .ttf,.woff,$<) $@
 ${woff2Target} : ${target} | $(DIST)/${dir}/woff2/
 	woff2_compress $<
 	mv $(subst .ttf,.woff2,$<) $@`;
 
-	return { buf, target, woffTarget, woff2Target, cmTarget };
+	return { buf, target, unhintedTarget, woffTarget, woff2Target, cmTarget };
 }
 
 let designGroups = [];
@@ -153,6 +159,7 @@ for (let dg of designGroups) {
 		upright: [],
 		italic: [],
 		oblique: [],
+		ttf_unhinted: [],
 		woff: [],
 		woff2: []
 	};
@@ -165,6 +172,11 @@ $(DIST)/${groupMapping.dir}/ : | $(DIST)/
 	makes.push(
 		`
 $(DIST)/${groupMapping.dir}/ttf/ : | $(DIST)/${groupMapping.dir}/
+	-@mkdir -p $@`
+	);
+	makes.push(
+		`
+$(DIST)/${groupMapping.dir}/ttf-unhinted/ : | $(DIST)/${groupMapping.dir}/
 	-@mkdir -p $@`
 	);
 	makes.push(
@@ -187,15 +199,20 @@ $(DIST)/${groupMapping.dir}/woff2/ : | $(DIST)/${groupMapping.dir}/
 				mapping.cm = true;
 			}
 
-			let { buf, target, woffTarget, woff2Target, cmTarget } = createMake(mapping);
+			let { buf, target, unhintedTarget, woffTarget, woff2Target, cmTarget } = createMake(
+				mapping
+			);
 			makes.push(buf);
 			groupTargets.ttf.push(target);
 			groupTargets[slantness].push(target);
+			groupTargets.ttf_unhinted.push(unhintedTarget);
 			groupTargets.woff.push(woffTarget);
 			groupTargets.woff2.push(woff2Target);
 		}
 
-	makes.push(`fonts-${dg.name} : ${groupTargets.ttf.join(" ")}`);
+	makes.push(
+		`fonts-${dg.name} : ${[...groupTargets.ttf, ...groupTargets.ttf_unhinted].join(" ")}`
+	);
 	makes.push(`fonts-${dg.name}-upright : ${groupTargets.upright.join(" ")}`);
 	makes.push(`fonts-${dg.name}-italic  : ${groupTargets.italic.join(" ")}`);
 	makes.push(`fonts-${dg.name}-oblique : ${groupTargets.oblique.join(" ")}`);
