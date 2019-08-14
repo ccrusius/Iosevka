@@ -8,6 +8,8 @@ You can join them in supporting Iosevka development by [pledging on Patreon](htt
 - Tianyu Ge
 - (Anonymous User 4362976)
 - Delton Ding
+- Codi Matters
+- Vasily Shmelev
 
 ## Backers
 
@@ -25,3 +27,7 @@ You can join them in supporting Iosevka development by [pledging on Patreon](htt
 - Clemens
 - Pascal
 - Kevin Sidarous
+- Beni Cherniavsky-Paskin
+- Bartłomiej T. Listwon
+- Will Binns-Smith
+- Jeff S

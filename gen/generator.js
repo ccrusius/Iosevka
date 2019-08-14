@@ -1,18 +1,20 @@
-let fs = require("fs");
-let path = require("path");
+"use strict";
+
+const fs = require("fs");
+const path = require("path");
 
 // let TTFWriter = require('node-sfnt').TTFWriter;
-let argv = require("yargs").argv;
-let buildGlyphs = require("./buildglyphs.js");
-let parameters = require("./support/parameters");
-let toml = require("toml");
+const argv = require("yargs").argv;
+const buildGlyphs = require("./buildglyphs.js");
+const parameters = require("../support/parameters");
+const toml = require("toml");
 
-let Glyph = require("./support/glyph");
-let autoref = require("./support/autoref");
+const Glyph = require("../support/glyph");
+const autoref = require("../support/autoref");
 const objectAssign = require("object-assign");
 
-let caryllShapeOps = require("caryll-shapeops");
-let c2q = require("megaminx").geometry.c2q;
+const caryllShapeOps = require("caryll-shapeops");
+const c2q = require("megaminx").geometry.c2q;
 
 function hasv(obj) {
 	if (!obj) return false;
@@ -88,28 +90,38 @@ function byGlyphPriority(a, b) {
 	return a.name < b.name ? -1 : a.name > b.name ? 1 : 0;
 }
 
+const PARAMETERS_TOML = path.resolve(__dirname, "../parameters.toml");
+const PRIVATE_TOML = path.resolve(__dirname, "../private.toml");
+const VARIANTS_TOML = path.resolve(__dirname, "../variants.toml");
+const EMPTYFONT_TOML = path.resolve(__dirname, "../emptyfont.toml");
+
 function getParameters(argv) {
 	const parametersData = Object.assign(
 		{},
-		toml.parse(fs.readFileSync(path.join(__dirname, "parameters.toml"), "utf-8")),
-		fs.existsSync(path.join(__dirname, "private.toml"))
-			? toml.parse(fs.readFileSync(path.join(__dirname, "private.toml"), "utf-8"))
-			: []
+		toml.parse(fs.readFileSync(PARAMETERS_TOML, "utf-8")),
+		fs.existsSync(PRIVATE_TOML) ? toml.parse(fs.readFileSync(PRIVATE_TOML, "utf-8")) : []
 	);
-	const variantData = toml.parse(fs.readFileSync(path.join(__dirname, "variants.toml"), "utf-8"));
+	const variantData = toml.parse(fs.readFileSync(VARIANTS_TOML, "utf-8"));
 
 	const para = parameters.build(parametersData, argv._);
-	const vsdata = formVariantData(variantData, para);
-	para.variants = vsdata;
-	para.variantSelector = parameters.build(vsdata, argv._);
-	para.defaultVariant = vsdata.default;
-	if (argv.family) para.family = argv.family;
+	const variantsData = formVariantData(variantData, para);
+	para.variants = variantsData;
+	para.variantSelector = parameters.build(variantsData, argv._);
+	para.defaultVariant = variantsData.default;
+
+	para.naming = {
+		family: argv.family,
+		version: argv.ver,
+		weight: argv["menu-weight"] - 0,
+		slant: argv["menu-slant"]
+	};
+
 	return para;
 }
 
 // Font building
 const font = (function() {
-	const emptyFont = toml.parse(fs.readFileSync(path.join(__dirname, "emptyfont.toml"), "utf-8"));
+	const emptyFont = toml.parse(fs.readFileSync(EMPTYFONT_TOML, "utf-8"));
 	const para = getParameters(argv);
 	const font = buildGlyphs.build.call(emptyFont, para);
 
@@ -125,75 +137,73 @@ const font = (function() {
 
 if (argv.charmap) {
 	const charmap = font.glyf.map(function(glyph) {
+		const isSpace = glyph.contours && glyph.contours.length ? 2 : 0;
 		return [
 			glyph.name,
 			glyph.unicode,
-			glyph.advanceWidth === 0
-				? hasv(glyph.anchors)
-					? 1
-					: glyph.contours && glyph.contours.length
-						? 2
-						: 0
-				: 0
+			glyph.advanceWidth === 0 ? (hasv(glyph.anchors) ? 1 : isSpace ? 2 : 0) : 0
 		];
 	});
 	fs.writeFileSync(argv.charmap, JSON.stringify(charmap), "utf8");
 }
 
-if (argv.o) {
-	function regulateGlyph(g, skew) {
-		if (!g.contours) return;
+function regulateGlyph(g, skew) {
+	if (!g.contours) return;
 
-		// Regulate
-		for (let k = 0; k < g.contours.length; k++) {
-			const contour = g.contours[k];
-			for (let p = 0; p < contour.length; p++) {
-				contour[p].x += contour[p].y * skew;
-				if (!contour[p].on) continue;
-				contour[p].x = Math.round(contour[p].x);
-			}
-			let offJ = null,
-				mx = null;
-			for (let p = 0; p < contour.length; p++) {
-				if (!contour[p].on) continue;
-				if (offJ) {
-					const origx = contour[p].x;
-					const rx = Math.round(contour[p].x * 4) / 4;
-					const origx0 = mx;
-					const rx0 = contour[offJ - 1].x;
-					if (origx === origx0) continue;
-					for (let poff = offJ; poff < p; poff++) {
-						contour[poff].x =
-							(contour[poff].x - origx0) / (origx - origx0) * (rx - rx0) + rx0;
-					}
+	// Regulate
+	for (let k = 0; k < g.contours.length; k++) {
+		const contour = g.contours[k];
+		for (let p = 0; p < contour.length; p++) {
+			contour[p].x += contour[p].y * skew;
+			if (!contour[p].on) continue;
+			contour[p].x = Math.round(contour[p].x);
+		}
+		let offJ = null,
+			mx = null;
+		for (let p = 0; p < contour.length; p++) {
+			if (!contour[p].on) continue;
+			if (offJ) {
+				const origx = contour[p].x;
+				const rx = Math.round(contour[p].x * 4) / 4;
+				const origx0 = mx;
+				const rx0 = contour[offJ - 1].x;
+				if (origx === origx0) continue;
+				for (let poff = offJ; poff < p; poff++) {
+					contour[poff].x =
+						((contour[poff].x - origx0) / (origx - origx0)) * (rx - rx0) + rx0;
 				}
-				mx = contour[p].x;
-				contour[p].x = Math.round(contour[p].x * 4) / 4;
-				offJ = p + 1;
 			}
-		}
-		const c1 = [];
-		for (let k = 0; k < g.contours.length; k++) {
-			c1.push(Glyph.contourToStandardCubic(g.contours[k]));
-		}
-
-		// De-overlap
-		g.contours = caryllShapeOps.removeOverlap(c1, 1, 256, true);
-
-		// Finalize
-		Glyph.prototype.cleanup.call(g, 0.1);
-		g.contours = c2q.contours(g.contours);
-		for (let k = 0; k < g.contours.length; k++) {
-			const contour = g.contours[k];
-			for (let p = 0; p < contour.length; p++) {
-				contour[p].x -= contour[p].y * skew;
-			}
+			mx = contour[p].x;
+			contour[p].x = Math.round(contour[p].x * 4) / 4;
+			offJ = p + 1;
 		}
 	}
+	const c1 = [];
+	for (let k = 0; k < g.contours.length; k++) {
+		c1.push(Glyph.contourToStandardCubic(g.contours[k]));
+	}
 
-	const skew = (argv.uprightify ? 1 : 0) * Math.tan((font.post.italicAngle || 0) / 180 * Math.PI);
+	// De-overlap
+	g.contours = caryllShapeOps.removeOverlap(c1, 1, 256, true);
+
+	// Finalize
+	g.contours = c2q.contours(g.contours);
+	for (let k = 0; k < g.contours.length; k++) {
+		const contour = g.contours[k];
+		for (let p = 0; p < contour.length; p++) {
+			contour[p].x -= contour[p].y * skew;
+		}
+	}
+}
+
+if (argv.o) {
+	const skew =
+		(argv.uprightify ? 1 : 0) * Math.tan(((font.post.italicAngle || 0) / 180) * Math.PI);
+	const excludeUnicodes = new Set();
+	excludeUnicodes.add(0x80);
+	for (let c = 0x2500; c <= 0x259f; c++) excludeUnicodes.add(c);
 	// autoref
-	autoref(font.glyf);
+	autoref(font.glyf, excludeUnicodes);
 	// regulate
 	for (let g of font.glyf) regulateGlyph(g, skew);
 

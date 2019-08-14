@@ -1,0 +1,3 @@
+[buildPlans.iosevka-custom-expanded]
+family = "Iosevka Term Expanded"
+design = ["term", "expanded", "v-underscore-low", "v-brace-straight", "v-zero-dotted", "v-asterisk-low"]
